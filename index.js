@@ -6,7 +6,6 @@ const scheduler = require('node-schedule');
 var utils = require('./assets/utils').utils;
 var moment = require('moment');
 
-var rD = 25;
 
 var mc = require('mcprotocol');
 var conn = new mc();
@@ -15,13 +14,22 @@ var doneWriting = false;
 
 var variables = {
     CURRENTDATE: 'D5000,6',
-    AADETAILS: 'D5200,20',
+    AADETAILS: 'D5200,6',
     ABDETAILS: 'D5400,6',
+    ACDETAILS: 'D5420,6',
+    ADDETAILS: 'D5430,6',
+    AEDETAILS: 'D5440,6',
     AAREMAININGDAYS: 'D3720, 1',
     AAALARM: 'M2000, 2',
     ABREMAININGDAYS: 'D3721, 1',
     ABALARM: 'M2002, 2',
-    WAADETAILS: 'D5206,4'
+    ACREMAININGDAYS: 'D3722, 1',
+    ACALARM: 'M2004, 2',
+    ADREMAININGDAYS: 'D3723, 1',
+    ADALARM: 'M2006, 2',
+    AEREMAININGDAYS: 'D3724, 1',
+    AEALARM: 'M2008, 2'
+
 };
 
 conn.initiateConnection({
@@ -41,12 +49,10 @@ function connected(err) {
     });
     conn.addItems('CURRENTDATE');
     conn.addItems('AADETAILS', 'AAREMAININGDAYS', 'AAALARM');
-    conn.addItems('AAREMAININGDAYS');
-    conn.addItems('AAALARM');
-    conn.addItems('ABDETAILS');
-    conn.addItems('ABREMAININGDAYS');
-    conn.addItems('ABALARM');
-    conn.addItems('WAADETAILS');
+    conn.addItems('ABDETAILS', 'ABREMAININGDAYS', 'ABALARM');
+    conn.addItems('ACDETAILS', 'ACREMAININGDAYS', 'ACALARM');
+    conn.addItems('ADDETAILS', 'ADREMAININGDAYS', 'ADALARM');
+    conn.addItems('AEDETAILS', 'AEREMAININGDAYS', 'AEALARM');
     // conn.writeItems(['WAADETAILS'], [[3, 9, 2018, 3]], valuesWritten);
     // writeData();
     // conn.writeItems(['AAREMAININGDAYS', 'AAALARM'], [[0], [false, false]], valuesWritten);
@@ -64,7 +70,10 @@ function valuesReady(error, values) {
         // Assign Date to array
         var dates = [
             values.AADETAILS,
-            values.ABDETAILS
+            values.ABDETAILS,
+            values.ACDETAILS,
+            values.ADDETAILS,
+            values.AEDETAILS
         ]
 
         // Validate TBM
@@ -81,12 +90,6 @@ function valuesReady(error, values) {
                     validation.timeBasedValidation(data, function (response) {
                         console.log('response.device', response.device);
                         console.log("Response ::" + " " + JSON.stringify(response, null, 2));
-                        var inputData = {
-                            remaingDaysName: response.device + 'REMAININGDAYS',
-                            alarmName: response.device + 'ALARM',
-                            remaingDaysCount: response.days,
-                            alarmOutput: [true, true]
-                        };
                         var remaingDays = response.device + 'REMAININGDAYS';
                         var alarm = response.device + 'ALARM';
                         console.log('*******************');
@@ -112,7 +115,7 @@ function valuesReady(error, values) {
                             conn.writeItems([remaingDays, alarm], [[response.days], [false, false]]);
                         }
                     });
-                }, 1000 * i);
+                }, 25 * i);
             })(i);
             console.log('*******************');
             console.log('*******************');

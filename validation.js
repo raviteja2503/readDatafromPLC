@@ -29,7 +29,7 @@ function timeBasedValidation(data, callback) {
         return;
     } else if (days <= data.warningStarts && days >= 0) {
         trigger = 1;
-        if (days == data.warningStarts) {
+        if (days == 0) {
             console.log('Today is final');
             end_day = 1;
             callback({
