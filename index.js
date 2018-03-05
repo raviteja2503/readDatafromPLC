@@ -4,6 +4,9 @@ var bodyParser = require('body-parser');
 var validation = require('./validation');
 const scheduler = require('node-schedule');
 var utils = require('./assets/utils').utils;
+var moment = require('moment');
+
+var rD = 25;
 
 var mc = require('mcprotocol');
 var conn = new mc();
@@ -12,17 +15,13 @@ var doneWriting = false;
 
 var variables = {
     CURRENTDATE: 'D5000,6',
-    Date1: 'D5200,3',
-    Date2: 'D5250,3',
-    Date3: 'D5260,3',
-    TEST2: 'D5200,3',
-    TEST3: 'D5250,3',
-    TEST4: 'D5260,3',
-    MULTIADD : 'D3720, 2',
-    SingleAdd: 'D3730, 3',
-    Add : 'D3740, 10',
-    Add2 : 'M2000, 4'
-    
+    AADETAILS: 'D5200,20',
+    ABDETAILS: 'D5400,6',
+    AAREMAININGDAYS: 'D3720, 1',
+    AAALARM: 'M2000, 2',
+    ABREMAININGDAYS: 'D3721, 1',
+    ABALARM: 'M2002, 2',
+    WAADETAILS: 'D5206,4'
 };
 
 conn.initiateConnection({
@@ -41,18 +40,17 @@ function connected(err) {
         return variables[tag];
     });
     conn.addItems('CURRENTDATE');
-    conn.addItems('Date1');
-    conn.addItems('Date2');
-    conn.addItems('Date3');
-    conn.addItems('TEST2');
-    conn.addItems('TEST3');
-    conn.addItems('TEST4');
-    conn.addItems('MULTIADD');
-    conn.addItems('SingleAdd');
-    conn.addItems('Add');
-    conn.addItems('Add2');
-    conn.writeItems(['MULTIADD', 'SingleAdd', 'Add', 'Add2'], [ [44, 55] , [11, 22, 33], [1,2,3,4,5,6,7,8,9,10], [true, true]], valuesWritten);
-    // conn.writeItems('SingleAdd', [ 111, 222, 333], valuesWritten);
+    conn.addItems('AADETAILS', 'AAREMAININGDAYS', 'AAALARM');
+    conn.addItems('AAREMAININGDAYS');
+    conn.addItems('AAALARM');
+    conn.addItems('ABDETAILS');
+    conn.addItems('ABREMAININGDAYS');
+    conn.addItems('ABALARM');
+    conn.addItems('WAADETAILS');
+    // conn.writeItems(['WAADETAILS'], [[3, 9, 2018, 3]], valuesWritten);
+    // writeData();
+    // conn.writeItems(['AAREMAININGDAYS', 'AAALARM'], [[0], [false, false]], valuesWritten);
+    // conn.writeItems(['ABREMAININGDAYS', 'ABALARM'], [[0], [false, false]], valuesWritten);
     conn.readAllItems(valuesReady);
 }
 
@@ -62,33 +60,60 @@ function valuesReady(error, values) {
     } else {
         console.log('Values Are', values);
         var currentDate = values.CURRENTDATE;
-        // var test1 = values.TEST2, test2 = values.TEST3, test3 = values.TEST4, date1 = values.Date1, date2 = values.Date2, date3 = values.Date3;
 
-        // Dates Given
+        // Assign Date to array
         var dates = [
-            values.Date1,
-            values.Date2,
-            values.Date3
+            values.AADETAILS,
+            values.ABDETAILS
         ]
 
         // Validate TBM
         for (i = 0; i < dates.length; i++) {
             console.log('*******************');
             console.log('*******************');
-            console.log('date', dates[i]);
-            var data = utils.formatPlcDataForTBM(dates[i], currentDate);
-            validation.timeBasedValidation(data, function (response) {
-                console.log("Response ::" + " " + JSON.stringify(response, null, 2));
-                if (response.trigger && response.end_date) {
-                    console.log('Today Is Last Day' + ' ' + 'Device ' + response.device + ' ' + 'Trigger Is ' + response.trigger + ' ' + 'End Is ' + response.end_date);
-                } else if (response.trigger) {
-                    console.log('Remaining Days' + ' ' + 'Device ' + response.device + ' ' + 'Trigger ' + response.trigger);
-                } else if (response.status == 'ERROR') {
-                    console.log('Please Choose Correct Date for' + 'Device ' + response.device);
-                } else {
-                    console.log('We Have More Days no trigger and no end' + +'Device ' + response.device);
-                }
-            });
+            console.log('*******************');
+            console.log('*******************');
+            (function (i) {
+                setTimeout(function () {
+                    console.log('date' + i + ' ' + ' ' + dates[i]);
+                    var data = utils.formatPlcDataForTBM(dates[i], currentDate);
+                    console.log('data', JSON.stringify(data, null, 2));
+                    validation.timeBasedValidation(data, function (response) {
+                        console.log('response.device', response.device);
+                        console.log("Response ::" + " " + JSON.stringify(response, null, 2));
+                        var inputData = {
+                            remaingDaysName: response.device + 'REMAININGDAYS',
+                            alarmName: response.device + 'ALARM',
+                            remaingDaysCount: response.days,
+                            alarmOutput: [true, true]
+                        };
+                        var remaingDays = response.device + 'REMAININGDAYS';
+                        var alarm = response.device + 'ALARM';
+                        console.log('*******************');
+                        console.log('*******************');
+                        console.log(remaingDays + ' ' + alarm);
+                        console.log('*******************');
+                        console.log('*******************');
+                        console.log('At:', moment().format('MMMM Do YYYY, h:mm:ss a'));
+                        if (response.status == 'DANGER') {
+                            console.log('Danger');
+                            console.log('Today Is Last Day' + ' ' + 'Device ' + response.device + ' ' + 'Trigger Is ' + response.trigger + ' ' + 'End Is ' + response.end_date);
+                            conn.writeItems([remaingDays, alarm], [[response.days], [true, true]]);
+                        } else if (response.status == 'WARNING') {
+                            console.log('WARNING');
+                            console.log('Remaining Days' + ' ' + 'Device ' + response.device + ' ' + 'Trigger ' + response.trigger);
+                            conn.writeItems([remaingDays, alarm], [[response.days], [true, false]]);
+                        } else if (response.status == 'ERROR') {
+                            console.log('ERROR');
+                            console.log('Please Choose Correct Date for' + 'Device ' + response.device);
+                        } else if (response.status == 'INFO') {
+                            console.log('INFO');
+                            console.log('We Have More Days no trigger and no end' + ' ' + 'Device ' + response.device);
+                            conn.writeItems([remaingDays, alarm], [[response.days], [false, false]]);
+                        }
+                    });
+                }, 1000 * i);
+            })(i);
             console.log('*******************');
             console.log('*******************');
         }
@@ -100,17 +125,7 @@ function valuesWritten(anythingBad) {
         console.log("SOMETHING WENT WRONG WRITING VALUES!!!!");
     } else {
         console.log("Done writing.");
-    }    
-    // doneWriting = true;
-    // if (doneReading) { process.exit(); }
-}
-
-function aaaa(anythingBad) {
-    if (anythingBad) {
-        console.log("SOMETHING WENT WRONG WRITING VALUES!!!!");
-    } else {
-        console.log("Done writing.");
-    }    
+    }
     // doneWriting = true;
     // if (doneReading) { process.exit(); }
 }

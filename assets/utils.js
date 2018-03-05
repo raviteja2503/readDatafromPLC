@@ -105,12 +105,13 @@ module.exports.utils = {
 	formatPlcDataForTBM: function (inputObj, currentDate) {
 		console.log('inputObj', inputObj +' ' + 'Current Date' +' ' + currentDate[1] + '/' + currentDate[2] + '/' + currentDate[0]);
 		var deviceNeedToUpdateOnDate, deviceNeedToUpdateOn, today;
-		deviceNeedToUpdateOnDate= inputObj[1] + '/' + inputObj[0] + '/' + inputObj[2];
+		deviceNeedToUpdateOnDate= inputObj[0] + '/' + inputObj[1] + '/' + inputObj[2];
 		deviceNeedToUpdateOn = new Date(deviceNeedToUpdateOnDate);
 		today = currentDate[1] + '/' + currentDate[2] + '/' + currentDate[0];
 		var data = {
-            'device': 'module1',
-            'today': new Date(today),
+            'device': String.fromCharCode(inputObj[4]) + String.fromCharCode(inputObj[5]),
+			'today': new Date(today),
+			'warningStarts': inputObj[3],
             'dnuo': deviceNeedToUpdateOn
 		};
 		return data;
